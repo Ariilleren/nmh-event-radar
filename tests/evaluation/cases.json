@@ -1,0 +1,48 @@
+{
+  "label": "Независимые синтетические формулировки; не передавать expected модели",
+  "now": "2026-11-14T06:00:00Z",
+  "location": {
+    "locationId": "EVAL-001", "name": "Учебная точка оценки", "address": "Москва, Проектный проезд, дом 4, корпус 2", "city": "Москва",
+    "latitude": 55.75, "longitude": 37.61, "timezone": "Europe/Moscow", "eventRadiusMeters": 900,
+    "openingHours": [{"days": [1,2,3,4,5,6,7], "start": "08:00", "end": "23:00"}],
+    "deliveryWindows": [{"days": [1,2,3,4,5,6,7], "start": "10:00", "end": "11:00"}],
+    "deliveryRouteStreets": ["Проектный проезд"], "waterDependency": "essential", "responsibleName": "Оценщик · демо"
+  },
+  "cases": [
+    {
+      "id": "paraphrased-road",
+      "input": {"text": "Вымышленное сообщение. Москва, Проектный проезд: движение автомобилей будет запрещено 16 ноября 2026 с 09:00 до 12:00, Europe/Moscow. Работы запланированы.", "publisher": "Учебный источник оценки", "publishedAt": "2026-11-14T08:00:00+03:00", "timezone": "Europe/Moscow"},
+      "expected": {"candidate": true, "category": "road_closure", "status": "relevant", "conditions": {"route": "match", "delivery": "match", "vehicles": "match"}}
+    },
+    {
+      "id": "different-building",
+      "input": {"text": "Вымышленное сообщение. Подача воды по адресу Москва, Проектный проезд, дом 4, корпус 3 будет приостановлена 16 ноября 2026 с 08:00 до 12:00 (Europe/Moscow). Работы запланированы.", "publisher": "Учебный источник оценки", "publishedAt": "2026-11-14T08:00:00+03:00", "timezone": "Europe/Moscow"},
+      "expected": {"candidate": true, "category": "water_outage", "status": "excluded", "conditions": {"address": "mismatch"}}
+    },
+    {
+      "id": "missing-coordinates",
+      "input": {"text": "Вымышленное сообщение. В Москве запланирован музыкальный вечер с выступлением группы 15 ноября 2026, с 19:00 до 21:00, Europe/Moscow. Площадка пока не объявлена.", "publisher": "Учебный источник оценки", "publishedAt": "2026-11-14T08:00:00+03:00", "timezone": "Europe/Moscow"},
+      "expected": {"candidate": true, "category": "mass_event", "status": "needs_review", "conditions": {"distance": "unknown"}}
+    },
+    {
+      "id": "cancelled-concert",
+      "input": {"text": "Вымышленное сообщение. Концерт в Москве, назначенный на 15 ноября 2026, 19:00–21:00 Europe/Moscow, отменён. Учебные координаты площадки: 55.7500, 37.6100.", "publisher": "Учебный источник оценки", "publishedAt": "2026-11-14T08:00:00+03:00", "timezone": "Europe/Moscow"},
+      "expected": {"candidate": true, "category": "mass_event", "status": "inactive", "conditions": {"status": "mismatch"}}
+    },
+    {
+      "id": "relative-no-publication",
+      "input": {"text": "Вымышленное сообщение. Завтра с 09:00 до 12:00 будет перекрытие движения автомобилей: Москва, Проектный проезд. Дата публикации и часовой пояс не указаны.", "publisher": "Учебный источник оценки", "publishedAt": null, "timezone": null},
+      "expected": {"candidate": true, "category": "road_closure", "status": "needs_review", "conditions": {"time": "unknown", "delivery": "unknown"}}
+    },
+    {
+      "id": "other-city",
+      "input": {"text": "Вымышленное сообщение. В Казани, на Проектном проезде, запланировано перекрытие движения автомобилей 16 ноября 2026 с 09:00 до 12:00 Europe/Moscow. Это не Москва.", "publisher": "Учебный источник оценки", "publishedAt": "2026-11-14T08:00:00+03:00", "timezone": "Europe/Moscow"},
+      "expected": {"candidate": true, "category": "road_closure", "status": "excluded", "conditions": {"city": "mismatch"}}
+    },
+    {
+      "id": "keyword-not-a-city-event",
+      "input": {"text": "Вымышленное объявление о продаже книги «Концерт и перекрытие дорог: воспоминания». В описании книги встречается фраза «отключение воды». Сообщение не объявляет городское событие или работы.", "publisher": "Учебный источник оценки", "publishedAt": "2026-11-14T08:00:00+03:00", "timezone": "Europe/Moscow"},
+      "expected": {"candidate": false, "category": "unsupported", "status": "needs_review", "conditions": {"category": "unknown"}}
+    }
+  ]
+}

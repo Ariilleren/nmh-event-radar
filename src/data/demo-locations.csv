@@ -1,0 +1,4 @@
+﻿locationId;name;address;city;latitude;longitude;timezone;eventRadiusMeters;waterDependency;responsibleName
+DEMO-001;У Арены;Москва, Учебная улица, дом 10;Москва;55.755;37.62;Europe/Moscow;1000;essential;Анна · демо
+DEMO-002;Пекарня на углу;Москва, Пекарский проезд, дом 7, корпус 2;Москва;55.76;37.64;Europe/Moscow;700;essential;Михаил · демо
+DEMO-003;Ранний кофе;Москва, Тихая учебная улица, дом 3;Москва;55.74;37.6;Europe/Moscow;500;essential;Анна · демо

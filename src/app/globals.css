@@ -1,0 +1,31 @@
+@import 'tailwindcss';
+
+@theme inline {
+  --color-background: #F4F2EC;
+  --color-foreground: #182B30;
+  --color-primary: #147D73;
+  --color-muted: #f3f5f2;
+  --color-muted-foreground: #667674;
+  --color-border: #e2e6df;
+  --color-input: #d6ddd6;
+  --font-sans: 'Golos Text', 'Manrope', 'Segoe UI', Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--color-background); color: var(--color-foreground); font-family: var(--font-sans); font-size: 14px; -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+a { text-decoration: none; }
+:focus-visible { outline: 2px solid #147D73; outline-offset: 4px; }
+button:disabled { cursor: not-allowed; }
+input[type='datetime-local'] { max-width: 100%; }
+summary { cursor: pointer; }
+.tabular-nums, time { font-variant-numeric: tabular-nums; }
+.app-main { min-width: 0; }
+.break-safe { overflow-wrap: anywhere; }
+.page-title { font-size: clamp(26px, 2.3vw, 34px); font-weight: 650; line-height: 1.15; letter-spacing: -.035em; }
+.section-kicker { font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #6f807b; }
+.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+.section-stack { display: grid; gap: 24px; }
+@media (max-width: 640px) { .field-grid { grid-template-columns: minmax(0,1fr); } }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { transition-duration: .001ms !important; animation-duration: .001ms !important; scroll-behavior: auto !important; } }

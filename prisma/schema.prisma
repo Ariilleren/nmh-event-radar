@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+}
+datasource db {
+  provider = "postgresql"
+}
+model Company {
+  id String @id @default("demo-company")
+  name String @default("Три зерна · учебная сеть")
+  demoClock Boolean @default(true)
+  seeded Boolean @default(false)
+}
+model Location {
+  id String @id @default(cuid())
+  locationId String @unique
+  name String
+  address String
+  profile Json
+  isDemo Boolean @default(false)
+  demoOrigin Boolean @default(false)
+  revision Int @default(1)
+  updatedAt DateTime @updatedAt
+  assessments Assessment[]
+  tasks Task[]
+}
+model Event {
+  id String @id @default(cuid())
+  title String
+  category String @default("unsupported")
+  status String @default("scheduled")
+  extracted Json?
+  confirmed Boolean @default(false)
+  version Int @default(0)
+  isDemo Boolean @default(false)
+  demoKey String? @unique
+  relatedEventId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages SourceMessage[]
+  analyses Analysis[]
+  assessments Assessment[]
+  tasks Task[]
+  @@index([category, updatedAt])
+}
+model SourceMessage {
+  id String @id @default(cuid())
+  eventId String
+  event Event @relation(fields:[eventId], references:[id], onDelete:Cascade)
+  publisher String
+  url String?
+  publishedAt DateTime?
+  timezone String?
+  receivedAt DateTime @default(now())
+  origin String
+  isDemo Boolean @default(false)
+  fingerprint String @unique
+  versions MessageVersion[]
+  @@index([eventId, receivedAt])
+}
+model MessageVersion {
+  id String @id @default(cuid())
+  messageId String
+  message SourceMessage @relation(fields:[messageId], references:[id], onDelete:Cascade)
+  version Int
+  text String
+  contentHash String
+  fingerprint String @unique
+  metadata Json
+  createdAt DateTime @default(now())
+  @@unique([messageId,version])
+}
+model Analysis {
+  id String @id @default(cuid())
+  eventId String
+  event Event @relation(fields:[eventId], references:[id], onDelete:Cascade)
+  version Int
+  mode String
+  model String?
+  outcome String
+  durationMs Int
+  extraction Json?
+  error String?
+  createdAt DateTime @default(now())
+  @@index([eventId,createdAt])
+}
+model Assessment {
+  id String @id @default(cuid())
+  eventId String
+  event Event @relation(fields:[eventId], references:[id], onDelete:Cascade)
+  locationId String
+  location Location @relation(fields:[locationId], references:[id], onDelete:Cascade)
+  eventVersion Int
+  locationRevision Int
+  status String
+  priority String
+  conditions Json
+  nextAction String
+  distanceMeters Float?
+  updatedAt DateTime @updatedAt
+  @@unique([eventId,locationId])
+  @@index([status,priority])
+}
+model Task {
+  id String @id @default(cuid())
+  eventId String
+  event Event @relation(fields:[eventId], references:[id], onDelete:Restrict)
+  locationId String
+  location Location @relation(fields:[locationId], references:[id], onDelete:Restrict)
+  owner String
+  dueAt DateTime
+  status String @default("todo")
+  comment String
+  decision String?
+  needsReview Boolean @default(false)
+  eventVersion Int
+  isDemo Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status,dueAt])
+}
+model Audit {
+  id String @id @default(cuid())
+  at DateTime @default(now())
+  actor String
+  action String
+  entityId String
+  details Json
+  isDemo Boolean @default(false)
+  @@index([entityId,at])
+}
