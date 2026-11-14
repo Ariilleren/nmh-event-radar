@@ -97,6 +97,7 @@ model Assessment {
   conditions Json
   nextAction String
   distanceMeters Float?
+  impact Json?
   updatedAt DateTime @updatedAt
   @@unique([eventId,locationId])
   @@index([status,priority])

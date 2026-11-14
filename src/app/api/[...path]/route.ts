@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z, ZodError } from 'zod';
 import { db } from '@/server/db';
 import { AppError } from '@/server/errors';
+import { importTelegramMessages, telegramSource } from '@/server/telegram';
 import { csvTemplate, previewCsv } from '@/server/csv';
 import * as workflow from '@/server/workflow';
 import { demoMessages, demoLocations } from '@/data/demo';
@@ -17,6 +18,7 @@ async function handler(request:NextRequest,context:{params:Promise<{path:string[
     if(method==='GET') {
       if(key==='health') {await db.$queryRaw`SELECT 1`;return NextResponse.json({ok:true});}
       if(key==='state') return NextResponse.json(await workflow.getState());
+      if(key==='sources/telegram') return NextResponse.json({source:telegramSource,monitoring:false});
       if(key==='demo/examples') return NextResponse.json({messages:demoMessages,locations:demoLocations});
       if(key==='locations/template') return new Response(csvTemplate(),{headers:{'content-type':'text/csv; charset=utf-8','content-disposition':'attachment; filename="locations-template.csv"'}});
       throw new AppError(404,'NOT_FOUND','Страница API не найдена.');
@@ -39,7 +41,14 @@ async function handler(request:NextRequest,context:{params:Promise<{path:string[
     else if(method==='PATCH' && path[0]==='locations' && path.length===2) result=await workflow.saveLocation(body,path[1]);
     else if(method==='POST' && key==='locations/preview') result=previewCsv(z.object({csv:z.string()}).parse(body).csv);
     else if(method==='POST' && key==='locations/import') {const data=actor.extend({csv:z.string()}).parse(body);result=await workflow.importLocations(data.csv,data.actor);}
-    else if(method==='POST' && key==='messages') result=await workflow.addMessage(body);
+    else if(method==='POST' && key==='messages') {
+      if(body && typeof body==='object' && 'origin' in body && body.origin==='telegram') throw new AppError(400,'ORIGIN','Происхождение Telegram назначается только серверным импортом канала.');
+      result=await workflow.addMessage(body);
+    }
+    else if(method==='POST' && key==='sources/telegram/import') {
+      const data=actor.extend({limit:z.number().int().min(1).max(20).default(10)}).strict().parse(body);
+      result=await importTelegramMessages(data.actor,workflow.addMessage,data.limit);
+    }
     else if(method==='POST' && key==='messages/import') {
       const data=actor.extend({messages:z.array(z.record(z.string(),z.unknown())).min(1).max(50)}).parse(body);
       const results=[];

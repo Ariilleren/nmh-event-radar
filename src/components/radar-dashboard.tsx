@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Activity, AlertCircle, ArrowDownToLine, ArrowUpRight, Building2, CalendarDays, CheckCircle2, ClipboardList, FileClock, FileUp, LayoutDashboard, LoaderCircle, MapPin, Plus, Radio, RefreshCw, Search, Settings2, ShieldCheck, Sparkles } from 'lucide-react';
 import { displayTime, request } from '@/lib/client';
 import type { HistoryEntry, Location, RadarState } from '@/lib/ui-types';
@@ -28,6 +29,7 @@ const pageNames: Record<View, string> = { overview: 'Обзор', locations: 'Т
 const initialFilters: Filters = { status: 'relevant', location: 'all', period: 'week', q: '', event: '' };
 
 export function RadarDashboard({ view, eventId }: { view: View; eventId?: string }) {
+  const router = useRouter();
   const [state, setState] = useState<RadarState | null>(null);
   const [actor, setActor] = useState('Анна Морозова');
   const [loading, setLoading] = useState(true);
@@ -67,12 +69,20 @@ export function RadarDashboard({ view, eventId }: { view: View; eventId?: string
     try {
       const result = await request<unknown>(path, body, method);
       setState(await request<RadarState>('/api/state'));
+      if (view === 'event' && path.endsWith('/analyze') && result && typeof result === 'object' && 'eventId' in result && typeof result.eventId === 'string' && result.eventId !== eventId) {
+        router.replace(`/events/${encodeURIComponent(result.eventId)}`);
+      }
       if (path === '/api/messages/import' && result && typeof result === 'object' && 'results' in result && Array.isArray(result.results)) {
         const rejected = result.results.filter((row: unknown): row is { row: number; error: string } => Boolean(row && typeof row === 'object' && 'error' in row));
         if (rejected.length) {
           setFeedback({ message: `Импортировано сообщений: ${result.results.length - rejected.length} из ${result.results.length}. ${rejected.map((row) => `Строка ${row.row}: ${row.error}`).join(' ')} Исправьте ошибки; уже сохранённые исходники остались в базе.`, error: true });
         } else { setFeedback({ message, error: false }); success = true; }
-      } else { setFeedback({ message, error: false }); success = true; }
+      } else {
+        const profile = path.startsWith('/api/locations') && result && typeof result === 'object' && 'profile' in result ? result.profile : null;
+        const profileError = profile && typeof profile === 'object' && 'businessContextError' in profile && typeof profile.businessContextError === 'string' ? profile.businessContextError : null;
+        setFeedback({ message: profileError ? `Точка и описание сохранены. Разбор бизнес-процессов не выполнен: ${profileError}` : message, error: Boolean(profileError) });
+        success = true;
+      }
     } catch (error) {
       setRecovery(true);
       setFeedback({ message: `${error instanceof Error ? error.message : 'Действие не выполнено.'} Обновите состояние перед повтором; изменения временно заблокированы.`, error: true });

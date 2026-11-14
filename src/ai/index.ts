@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import { timezoneSchema } from '../domain/schemas';
 import { getAIStatus, readAiMode } from './config';
-import { AiError, type AiOptions, type AnalysisInput, type AnalysisResult } from './types';
+import { AiError, type AiOptions, type AnalysisInput, type AnalysisResult, type BusinessAnalysisResult } from './types';
 
 export { getAIStatus, AiError };
-export type { AiOptions, AnalysisInput, AnalysisResult };
+export type { AiOptions, AnalysisInput, AnalysisResult, BusinessAnalysisResult };
 
 const inputSchema = z.object({
   text: z.string().min(10).max(16_000),
@@ -29,6 +29,27 @@ export async function analyzeMessage(input: AnalysisInput, options: AiOptions = 
     return { ...result, mode, durationMs: Date.now() - started };
   } catch (cause) {
     const error = cause instanceof AiError ? cause : new AiError('AI_VALIDATION_ERROR', 'Не удалось проверить результат AI. Сведения не приняты.');
+    error.mode = mode;
+    error.model = mode === 'LIVE' ? (options.env ?? process.env).AI_MODEL?.trim() || null : null;
+    error.durationMs = Date.now() - started;
+    throw error;
+  }
+}
+
+/** Parse user context once when edited; news text is never an input to this operation. */
+export async function analyzeBusinessDescription(description: string, options: AiOptions = {}): Promise<BusinessAnalysisResult> {
+  const started = Date.now();
+  let mode: 'DEMO' | 'LIVE' | null = null;
+  try {
+    mode = readAiMode(options.env);
+    const parsed = z.string().trim().min(1).max(8000).safeParse(description);
+    if (!parsed.success) throw new AiError('AI_INPUT_INVALID', 'Описание бизнеса должно содержать от 1 до 8000 символов.', 400);
+    if (mode === 'DEMO') throw new AiError('AI_PROFILE_DEMO_ONLY', 'Описание сохранено. Для разбора новых бизнес-процессов нужен настроенный режим LIVE; DEMO не угадывает зависимости.', 422);
+    const { analyzeBusinessLive } = await import('./live');
+    const result = await analyzeBusinessLive(parsed.data, options);
+    return { ...result, mode, durationMs: Date.now() - started };
+  } catch (cause) {
+    const error = cause instanceof AiError ? cause : new AiError('AI_VALIDATION_ERROR', 'Не удалось проверить бизнес-процессы. Описание сохранено без предположений.');
     error.mode = mode;
     error.model = mode === 'LIVE' ? (options.env ?? process.env).AI_MODEL?.trim() || null : null;
     error.durationMs = Date.now() - started;

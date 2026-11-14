@@ -1,4 +1,4 @@
-import type { Extraction } from '../domain/schemas';
+import type { BusinessContext, Extraction } from '../domain/schemas';
 
 export type AiMode = 'DEMO' | 'LIVE';
 export interface AnalysisInput {
@@ -9,6 +9,13 @@ export interface AnalysisInput {
 }
 export interface AnalysisResult {
   extraction: Extraction;
+  extractions?: Extraction[];
+  mode: AiMode;
+  model: string | null;
+  durationMs: number;
+}
+export interface BusinessAnalysisResult {
+  context: BusinessContext;
   mode: AiMode;
   model: string | null;
   durationMs: number;
