@@ -1,2 +1,2 @@
-import { RadarDashboard } from '@/components/radar-dashboard';
-export default function Page() { return <RadarDashboard view="settings" />; }
+import { redirect } from 'next/navigation';
+export default function Page() { redirect('/profile'); }

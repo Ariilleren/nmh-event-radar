@@ -1,0 +1,120 @@
+{
+  "kind": "prepared-test-data",
+  "isSynthetic": true,
+  "scenarioDate": "2026-11-16",
+  "timezone": "Europe/Moscow",
+  "notice": "Все бизнесы, адреса и обстоятельства вымышлены. Это данные для ручного ввода или существующего API, не готовый результат AI и не импорт в рабочую базу.",
+  "businesses": [
+    {
+      "id": "three-cups",
+      "profilePatch": {
+        "name": "Анна · учебный профиль",
+        "businessName": "Три чашки · учебный бизнес",
+        "businessType": "Кофейня",
+        "city": "Москва",
+        "about": "Продукты: кофе, выпечка. Услуги: продажа навынос. Аудитория: посетители парка."
+      },
+      "locations": [
+        {
+          "locationId": "TEST-PARK",
+          "name": "Парк · учебная точка",
+          "address": "Москва, Учебная улица, дом 10",
+          "city": "Москва",
+          "latitude": 55.755,
+          "longitude": 37.62,
+          "timezone": "Europe/Moscow",
+          "openingHours": [{ "days": [1, 2, 3, 4, 5, 6, 7], "start": "08:00", "end": "23:00" }],
+          "deliveryWindows": [{ "days": [1, 2, 3, 4, 5, 6, 7], "start": "16:00", "end": "17:00" }],
+          "deliveryRouteStreets": ["Учебная улица"],
+          "eventRadiusMeters": 1000,
+          "waterDependency": "essential",
+          "responsibleName": "Анна · учебный контакт"
+        },
+        {
+          "locationId": "TEST-OFFICES",
+          "name": "Офисы · учебная точка",
+          "address": "Москва, Пекарский проезд, дом 7, корпус 2",
+          "city": "Москва",
+          "latitude": 55.76,
+          "longitude": 37.64,
+          "timezone": "Europe/Moscow",
+          "openingHours": [{ "days": [1, 2, 3, 4, 5, 6, 7], "start": "08:00", "end": "19:00" }],
+          "deliveryWindows": [{ "days": [1, 2, 3, 4, 5, 6, 7], "start": "09:00", "end": "10:00" }],
+          "deliveryRouteStreets": ["Пекарский проезд"],
+          "eventRadiusMeters": 1000,
+          "waterDependency": "essential",
+          "responsibleName": "Илья · учебный контакт"
+        },
+        {
+          "locationId": "TEST-STATION",
+          "name": "Вокзал · учебная точка",
+          "address": "Москва, Тихая учебная улица, дом 3",
+          "city": "Москва",
+          "latitude": 55.74,
+          "longitude": 37.6,
+          "timezone": "Europe/Moscow",
+          "openingHours": [{ "days": [1, 2, 3, 4, 5, 6, 7], "start": "06:00", "end": "23:00" }],
+          "deliveryWindows": [{ "days": [1, 2, 3, 4, 5, 6, 7], "start": "10:00", "end": "11:00" }],
+          "deliveryRouteStreets": ["Тихая учебная улица"],
+          "eventRadiusMeters": 1000,
+          "waterDependency": "essential",
+          "responsibleName": "Олег · учебный контакт"
+        }
+      ]
+    },
+    {
+      "id": "books",
+      "profilePatch": {
+        "name": "Мария · учебный профиль",
+        "businessName": "Читай рядом · учебный бизнес",
+        "businessType": "Магазин",
+        "city": "Москва",
+        "about": "Учебный книжный магазин. Продаём книги и блокноты. Принимаем заказы через платформу УчебМаркет. Процесс «Приём заказов» использует платформу УчебМаркет. Продажи через другие площадки не ведём. Все организации и адреса в этом профиле вымышлены."
+      },
+      "locations": [
+        {
+          "locationId": "TEST-BOOKS",
+          "name": "Книжный · учебная точка",
+          "address": "Москва, Книжный проезд, дом 12",
+          "city": "Москва",
+          "latitude": 55.7,
+          "longitude": 37.7,
+          "timezone": "Europe/Moscow",
+          "openingHours": [{ "days": [1, 2, 3, 4, 5, 6, 7], "start": "10:00", "end": "20:00" }],
+          "deliveryWindows": [{ "days": [1, 2, 3, 4, 5, 6, 7], "start": "10:00", "end": "11:00" }],
+          "deliveryRouteStreets": ["Книжный проезд"],
+          "eventRadiusMeters": 1000,
+          "waterDependency": "optional",
+          "responsibleName": "Мария · учебный контакт"
+        }
+      ]
+    },
+    {
+      "id": "studio",
+      "profilePatch": {
+        "name": "Елена · учебный профиль",
+        "businessName": "Студия Линия · учебный бизнес",
+        "businessType": "Услуги",
+        "city": "Москва",
+        "about": "Учебная парикмахерская. Оказываем услуги стрижки и укладки. Вода необходима для мытья волос. Принимаем записи через платформу УчебЗапись. Процесс «Запись клиентов» использует платформу УчебЗапись. Все организации и адреса вымышлены."
+      },
+      "locations": [
+        {
+          "locationId": "TEST-STUDIO",
+          "name": "Студия · учебная точка",
+          "address": "Москва, улица Мастеров, дом 4",
+          "city": "Москва",
+          "latitude": 55.8,
+          "longitude": 37.5,
+          "timezone": "Europe/Moscow",
+          "openingHours": [{ "days": [1, 2, 3, 4, 5, 6, 7], "start": "09:00", "end": "21:00" }],
+          "deliveryWindows": [{ "days": [1, 2, 3, 4, 5, 6, 7], "start": "12:00", "end": "13:00" }],
+          "deliveryRouteStreets": ["улица Мастеров"],
+          "eventRadiusMeters": 1000,
+          "waterDependency": "essential",
+          "responsibleName": "Елена · учебный контакт"
+        }
+      ]
+    }
+  ]
+}

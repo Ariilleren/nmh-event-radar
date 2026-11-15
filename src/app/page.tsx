@@ -1,2 +1,2 @@
-import { RadarDashboard } from '@/components/radar-dashboard';
-export default function Page() { return <RadarDashboard view="overview" />; }
+import { ProductApp } from '@/components/product-app';
+export default function Page() { return <ProductApp view="feed" />; }

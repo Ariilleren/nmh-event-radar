@@ -11,7 +11,7 @@
     "build": "prisma generate && next build",
     "start": "next start --hostname 127.0.0.1",
     "lint": "eslint .",
-    "typecheck": "prisma generate && tsc --noEmit",
+    "typecheck": "prisma generate && next typegen && tsc --noEmit",
     "test": "vitest run tests/unit",
     "test:integration": "tsx scripts/integration.ts",
     "test:e2e": "playwright test",
@@ -29,6 +29,7 @@
     "clsx": "2.1.1",
     "csv-parse": "7.0.3",
     "dotenv": "18.0.10",
+    "leaflet": "1.9.4",
     "lucide-react": "1.73.0",
     "next": "16.4.6",
     "pg": "8.23.1",
@@ -40,6 +41,7 @@
   "devDependencies": {
     "@playwright/test": "1.65.1",
     "@tailwindcss/postcss": "4.3.5",
+    "@types/leaflet": "1.9.22",
     "@types/node": "24.19.2",
     "@types/pg": "8.23.1",
     "@types/react": "19.3.0",
@@ -58,6 +60,8 @@
     "esbuild@0.28.2": true
   },
   "overrides": {
-    "@typescript-eslint/typescript-estree": { "minimatch": "11.0.8" }
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.8"
+    }
   }
 }

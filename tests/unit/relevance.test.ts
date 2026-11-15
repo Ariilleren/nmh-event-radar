@@ -4,6 +4,14 @@ import { extractionSchema, locationSchema, validateQuotes, type Extraction } fro
 
 const now = '2026-11-16T04:00:00+03:00';
 const everyDay = [1, 2, 3, 4, 5, 6, 7];
+it('matches Russian grammatical forms without merging different streets or cities', () => {
+  const location = point();
+  const event = road('Складской улице'); event.city = 'Москве';
+  expect(evaluate(location, event, now).status).toBe('relevant');
+  expect(evaluate(location, { ...event, street: 'Лесной улице' }, now).status).toBe('excluded');
+  expect(evaluate(location, { ...event, street: 'Складской проезд' }, now).status).toBe('excluded');
+  expect(evaluate(location, { ...event, city: 'Санкт-Петербурге' }, now).status).toBe('excluded');
+});
 const point = () => locationSchema.parse({
   locationId: 'relevance-bakery', name: 'Пекарня на Тестовой',
   city: 'Москва', address: 'Москва, улица Тестовая, дом 7', timezone: 'Europe/Moscow',

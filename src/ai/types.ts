@@ -33,6 +33,8 @@ export class AiError extends Error {
   mode: AiMode | null = null;
   model: string | null = null;
   durationMs = 0;
+  /** Provider backoff only; no upstream body or credentials are retained. */
+  retryAfterMs?: number;
   constructor(code: string, message: string, statusCode = 502) {
     super(message);
     this.name = 'AiError';

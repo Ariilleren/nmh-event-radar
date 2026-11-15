@@ -41,6 +41,8 @@ model Event {
   analyses Analysis[]
   assessments Assessment[]
   tasks Task[]
+  feedback EventFeedback[]
+  notifications UserNotification[]
   @@index([category, updatedAt])
 }
 model SourceMessage {
@@ -55,7 +57,11 @@ model SourceMessage {
   origin String
   isDemo Boolean @default(false)
   fingerprint String @unique
+  channel String?
+  channelMessageId String?
+  personalAnalyses PersonalNewsAnalysis[]
   versions MessageVersion[]
+  @@unique([channel,channelMessageId])
   @@index([eventId, receivedAt])
 }
 model MessageVersion {
@@ -129,4 +135,104 @@ model Audit {
   details Json
   isDemo Boolean @default(false)
   @@index([entityId,at])
+}
+
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  passwordHash String
+  name String
+  photo String?
+  businessName String @default("")
+  businessType String @default("")
+  city String @default("")
+  about String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions Session[]
+  locations UserLocation[]
+  feedback EventFeedback[]
+  notifications UserNotification[]
+  newsAnalyses PersonalNewsAnalysis[]
+}
+
+model SourceHealth {
+  channel String @id
+  status String @default("pending")
+  lastAttemptAt DateTime?
+  lastSuccessAt DateTime?
+  errorCode String?
+  errorMessage String?
+  fetched Int @default(0)
+  changed Int @default(0)
+  initialized Boolean @default(false)
+}
+
+model PersonalNewsAnalysis {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  messageId String
+  message SourceMessage @relation(fields:[messageId], references:[id], onDelete:Cascade)
+  contentHash String
+  profileHash String
+  status String @default("pending")
+  result Json?
+  errorCode String?
+  errorMessage String?
+  attempts Int @default(0)
+  retryAt DateTime?
+  leaseUntil DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId,messageId,contentHash,profileHash])
+  @@index([userId,status])
+}
+
+model Session {
+  tokenHash String @id
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model UserLocation {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  locationId String
+  profile Json
+  revision Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId,locationId])
+}
+
+model EventFeedback {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  eventId String
+  event Event @relation(fields:[eventId], references:[id], onDelete:Cascade)
+  value Int
+  updatedAt DateTime @updatedAt
+  @@unique([userId,eventId])
+}
+
+model UserNotification {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  eventId String
+  event Event @relation(fields:[eventId], references:[id], onDelete:Cascade)
+  eventVersion Int
+  title String
+  body String
+  readAt DateTime?
+  createdAt DateTime @default(now())
+  @@unique([userId,eventId,eventVersion])
+  @@index([userId,readAt])
 }

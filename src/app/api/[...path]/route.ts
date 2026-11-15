@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'node:crypto';
 import { z, ZodError } from 'zod';
 import { db } from '@/server/db';
 import { AppError } from '@/server/errors';
@@ -10,6 +11,15 @@ import { Prisma } from '@/generated/prisma/client';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const actor = z.object({actor:z.string().trim().min(1).max(120)});
+function requireAdmin(request: NextRequest) {
+  const token = process.env.OPERATIONS_ADMIN_TOKEN;
+  const supplied = request.headers.get('authorization');
+  const expected = token ? `Bearer ${token}` : '';
+  if (!expected || !supplied || Buffer.byteLength(supplied) !== Buffer.byteLength(expected) ||
+      !timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))) {
+    throw new AppError(403, 'ADMIN_REQUIRED', 'Операция доступна только администратору источников.');
+  }
+}
 async function handler(request:NextRequest,context:{params:Promise<{path:string[]}>}) {
   try {
     const {path}=await context.params;
@@ -17,12 +27,18 @@ async function handler(request:NextRequest,context:{params:Promise<{path:string[
     const method=request.method;
     if(method==='GET') {
       if(key==='health') {await db.$queryRaw`SELECT 1`;return NextResponse.json({ok:true});}
-      if(key==='state') return NextResponse.json(await workflow.getState());
-      if(key==='sources/telegram') return NextResponse.json({source:telegramSource,monitoring:false});
+      if(key==='state') {
+        requireAdmin(request);
+        return NextResponse.json(await workflow.getState(), { headers: { 'Cache-Control': 'private, no-store' } });
+      }
       if(key==='demo/examples') return NextResponse.json({messages:demoMessages,locations:demoLocations});
+      if(key==='sources/telegram') { requireAdmin(request); return NextResponse.json({source:telegramSource,monitoring:false}); }
       if(key==='locations/template') return new Response(csvTemplate(),{headers:{'content-type':'text/csv; charset=utf-8','content-disposition':'attachment; filename="locations-template.csv"'}});
       throw new AppError(404,'NOT_FOUND','Страница API не найдена.');
     }
+    // Ingestion and the previous operations API are administrative. Personal
+    // profile, feedback and notifications use /api/product with user sessions.
+    requireAdmin(request);
     const origin=request.headers.get('origin');
     const host=request.headers.get('host');
     if(origin) {

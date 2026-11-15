@@ -9,6 +9,7 @@ export const telegramSource = {
 } as const;
 
 export type TelegramMessage = {
+  channel: 'newsssss09'; messageId: string; links: { text: string; url: string }[];
   text: string;
   publisher: string;
   url: string;
@@ -33,11 +34,14 @@ function attributes(tag: string): Record<string, string> {
 }
 
 /** Parses Telegram's public preview, preserving the publication text and absolute post URL. */
-export function parseTelegramPage(html: string, limit = 10): { messages: TelegramMessage[]; skipped: number } {
+export function parseTelegramPage(html: string, limit = 50): { messages: TelegramMessage[]; skipped: number; nextBefore: string | null } {
   if (Buffer.byteLength(html) > maxPageBytes) throw new AppError(502, 'TELEGRAM_SIZE', 'Страница Telegram превышает лимит 2 МБ.');
   const messages: TelegramMessage[] = [];
   let skipped = 0;
-  let post: { id: string; text: string; date: string | null; depth: number } | null = null;
+  let post: { id: string; text: string; date: string | null; depth: number; links: TelegramMessage['links'] } | null = null;
+  let anchor: { url: string; start: number } | null = null;
+  let observed = 0, invalidText = 0;
+  let nextBefore: string | null = null;
   let depth = 0;
   let textDepth: number | null = null;
   let ignoredTag: string | null = null;
@@ -45,10 +49,10 @@ export function parseTelegramPage(html: string, limit = 10): { messages: Telegra
   const finish = () => {
     if (!post) return;
     const text = post.text.replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').trim();
-    if (text.length >= 10 && text.length <= 20000 && post.date && !seen.has(post.id)) {
+    if (text.length >= 1 && text.length <= 20000 && post.date && !seen.has(post.id)) {
       seen.add(post.id);
-      messages.push({ text, publisher: telegramSource.title, url: `${telegramSource.url}/${post.id}`, publishedAt: post.date, timezone: null, origin: 'telegram' });
-    } else skipped++;
+      messages.push({ channel: telegramSource.channel, messageId: post.id, links: post.links, text, publisher: telegramSource.title, url: `${telegramSource.url}/${post.id}`, publishedAt: post.date, timezone: null, origin: 'telegram' });
+    } else { skipped++; if (text && !post.date) invalidText++; }
     post = null; textDepth = null;
   };
   // Tags and text are separate tokens: escaped markup in a post cannot become a real tag.
@@ -78,10 +82,20 @@ export function parseTelegramPage(html: string, limit = 10): { messages: Telegra
       if (classes.includes('tgme_widget_message') && attrs['data-post']) {
         finish();
         const known = new RegExp(`^${telegramSource.channel}/([1-9][0-9]*)$`, 'i').exec(attrs['data-post']);
-        if (known) post = { id: known[1], text: '', date: null, depth };
+        if (known) { observed++; post = { id: known[1], text: '', date: null, depth, links: [] }; }
       }
       if (post && classes.includes('tgme_widget_message_text')) textDepth = depth;
       continue;
+    }
+    if (name === 'a') {
+      if (!closing) {
+        const href = attributes(token).href;
+        if (href) { try {
+          const url = new URL(href, 'https://t.me');
+          if (url.origin === 'https://t.me' && url.pathname === '/s/newsssss09' && /^\d+$/.test(url.searchParams.get('before') ?? '')) nextBefore = url.searchParams.get('before');
+          if (post && textDepth !== null && ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password) anchor = { url: url.href, start: post.text.length };
+        } catch { /* Invalid links are not followed. */ } }
+      } else if (anchor && post) { post.links.push({ text: post.text.slice(anchor.start), url: anchor.url }); anchor = null; }
     }
     if (post && name === 'time' && !closing) {
       const date = attributes(token).datetime;
@@ -91,14 +105,14 @@ export function parseTelegramPage(html: string, limit = 10): { messages: Telegra
     if (post && textDepth !== null && closing && ['p', 'li', 'blockquote'].includes(name)) post.text += '\n';
   }
   finish();
-  if (!messages.length) throw new AppError(502, 'TELEGRAM_EMPTY', 'В публичном просмотре @newsssss09 нет доступных текстовых публикаций. Канал может быть закрыт или Telegram изменил формат страницы.');
-  return { messages: messages.slice(-Math.max(1, Math.min(20, limit))), skipped };
+  if ((!messages.length && invalidText) || (!observed && !/class=["'][^"']*tgme_channel_info/.test(html))) throw new AppError(502, 'TELEGRAM_EMPTY', 'В публичном просмотре @newsssss09 нет доступных текстовых публикаций либо изменился формат страницы.');
+  return { messages: messages.slice(-Math.max(1, Math.min(50, limit))), skipped, nextBefore };
 }
 
-export async function fetchTelegramMessages(limit = 10, transport: typeof fetch = fetch) {
+async function fetchTelegramPage(limit: number, transport: typeof fetch, before?: string) {
   const signal = AbortSignal.timeout(15_000);
   try {
-    const response = await transport(telegramSource.previewUrl, { signal, redirect: 'error', cache: 'no-store', headers: { Accept: 'text/html', 'User-Agent': 'NMH-Event-Radar/1.0 (public channel preview)' } });
+    const response = await transport(before ? `${telegramSource.previewUrl}?before=${before}` : telegramSource.previewUrl, { signal, redirect: 'error', cache: 'no-store', headers: { Accept: 'text/html', 'User-Agent': 'NMH-Event-Radar/1.0 (public channel preview)' } });
     if (!response.ok) throw new AppError(502, 'TELEGRAM_HTTP', `Telegram не отдал публикации @newsssss09 (HTTP ${response.status}). Повторите позже.`);
     if (!(response.headers.get('content-type') ?? '').toLowerCase().includes('text/html')) throw new AppError(502, 'TELEGRAM_FORMAT', 'Telegram вернул неподдерживаемый формат вместо страницы канала.');
     if (Number(response.headers.get('content-length') ?? 0) > maxPageBytes) throw new AppError(502, 'TELEGRAM_SIZE', 'Страница Telegram превышает лимит 2 МБ.');
@@ -118,16 +132,31 @@ export async function fetchTelegramMessages(limit = 10, transport: typeof fetch 
     return parseTelegramPage(Buffer.concat(chunks).toString('utf8'), limit);
   } catch (error) {
     if (error instanceof AppError) throw error;
-    throw new AppError(signal.aborted ? 504 : 502, signal.aborted ? 'TELEGRAM_TIMEOUT' : 'TELEGRAM_UNAVAILABLE', 'Не удалось загрузить @newsssss09 из Telegram. Проверьте доступ к t.me и повторите. Можно сохранить текст публикации вручную со ссылкой.');
+    throw new AppError(signal.aborted ? 504 : 502, signal.aborted ? 'TELEGRAM_TIMEOUT' : 'TELEGRAM_UNAVAILABLE', 'Не удалось загрузить @newsssss09 из Telegram. Сервер повторит проверку автоматически; сохранённые новости остаются доступны.');
   }
 }
 
-type SaveMessage = (message: TelegramMessage & { actor: string }) => Promise<{ eventId: string; duplicate: boolean }>;
+export async function fetchTelegramMessages(limit = 50, transport: typeof fetch = fetch) {
+  const desired = Math.max(1, Math.min(50, limit));
+  const messages = new Map<string, TelegramMessage>();
+  let before: string | undefined; let skipped = 0;
+  const visited = new Set<string>();
+  for (let page = 0; page < 10 && messages.size < desired; page++) {
+    const result = await fetchTelegramPage(desired, transport, before);
+    for (const message of result.messages) messages.set(message.messageId, message);
+    skipped += result.skipped;
+    if (!result.nextBefore || visited.has(result.nextBefore)) break;
+    visited.add(result.nextBefore); before = result.nextBefore;
+  }
+  return { messages: [...messages.values()].sort((a, b) => Number(a.messageId) - Number(b.messageId)).slice(-desired), skipped };
+}
+
+type SaveMessage = (message: Omit<TelegramMessage, 'channel' | 'messageId' | 'links'> & { actor: string }) => Promise<{ eventId: string; duplicate: boolean }>;
 export async function importTelegramMessages(actor: string, save: SaveMessage, limit = 10, transport: typeof fetch = fetch) {
   const page = await fetchTelegramMessages(limit, transport);
   const results: { eventId: string; duplicate: boolean }[] = [];
   for (const message of page.messages) {
-    try { results.push(await save({ ...message, actor })); }
+    try { results.push(await save({ text: message.text, publisher: message.publisher, url: message.url, publishedAt: message.publishedAt, timezone: message.timezone, origin: message.origin, actor })); }
     catch { throw new AppError(502, 'TELEGRAM_SAVE', `Не удалось сохранить все публикации Telegram. Уже обработано: ${results.length} из ${page.messages.length}. Повторите импорт: сохранённые повторы будут пропущены.`); }
   }
   return { source: telegramSource, fetched: page.messages.length, imported: results.filter((item) => !item.duplicate).length, duplicates: results.filter((item) => item.duplicate).length, skipped: page.skipped, results };

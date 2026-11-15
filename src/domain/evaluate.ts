@@ -21,7 +21,17 @@ export type Evaluation = {
 
 const dayMs = 86_400_000;
 const normalize = (text: string) => text.toLocaleLowerCase('ru-RU').replace(/ё/g, 'е').replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
-const street = (text: string) => normalize(text).replace(/(^|\s)ул(?=\s|$)/g, '$1улица');
+const cityAliases: Record<string, string> = { москве: 'москва', москвы: 'москва', 'санкт петербурге': 'санкт петербург', 'санкт петербурга': 'санкт петербург' };
+const cityName = (text: string) => cityAliases[normalize(text).replace(/-/g, ' ')] ?? normalize(text).replace(/-/g, ' ');
+const street = (text: string) => {
+  const tokens = normalize(text).replace(/(^|\s)ул(?=\s|$)/g, '$1улица').split(' ');
+  const types: Record<string, string> = { улица: 'улица', улице: 'улица', улицы: 'улица', улицу: 'улица', улицей: 'улица', проезд: 'проезд', проезде: 'проезд', проезда: 'проезд', проезду: 'проезд', проездом: 'проезд' };
+  const kind = tokens.find(token => types[token]);
+  if (!kind) return tokens.join(' ');
+  const type = types[kind];
+  const name = tokens.filter(token => token !== kind).map(token => type === 'улица' ? token.replace(/(?:ая|ой|ую)$/u, 'ая') : token);
+  return [type, ...name].join(' ');
+};
 
 export function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const radians = (n: number) => n * Math.PI / 180;
@@ -130,7 +140,7 @@ function evaluateLegacy(location: LocationInput, event: Extraction, now: Date | 
     return { status: 'inactive', priority: 'routine', conditions, nextAction: 'При необходимости сохраните итог по ранее назначенным задачам.' };
   }
   add('time', 'Известный период', timeKnown ? 'match' : 'unknown', timeKnown ? 'Начало и конец известны с часовым поясом; конец интервала не включается.' : 'Нужны начало, конец, часовой пояс и подтверждающие цитаты.', 'startsAt');
-  const cityResult = location.city && has('city') ? (normalize(location.city) === normalize(event.city!) ? 'match' : 'mismatch') : 'unknown';
+  const cityResult = location.city && has('city') ? (cityName(location.city) === cityName(event.city!) ? 'match' : 'mismatch') : 'unknown';
   add('city', 'Город', cityResult, cityResult === 'match' ? 'Города совпадают.' : cityResult === 'mismatch' ? 'Известные города различаются; одноимённые улицы не объединяются.' : 'Город точки или сообщения неизвестен.', 'city');
 
   let distanceMeters: number | undefined;
@@ -240,7 +250,7 @@ function evaluateBusiness(location: LocationInput, event: Extraction, now: Date 
   add('status', 'Статус источника', 'match', 'Статус взят из публикации; независимая проверка не выполнялась.', 'status');
 
   const checkCity = () => {
-    const result = location.city && has('city') ? (normalize(location.city) === normalize(event.city!) ? 'match' : 'mismatch') : 'unknown';
+    const result = location.city && has('city') ? (cityName(location.city) === cityName(event.city!) ? 'match' : 'mismatch') : 'unknown';
     add('city', 'Город', result, result === 'match' ? 'Города совпадают.' : result === 'mismatch' ? 'Известные города различаются.' : 'Город точки или события неизвестен.', 'city');
     return result;
   };

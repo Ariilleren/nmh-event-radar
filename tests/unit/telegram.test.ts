@@ -9,15 +9,15 @@ const page = (text: string) => new Response(text, { headers: { 'content-type': '
 describe('configured Telegram source', () => {
   it('preserves text, Cyrillic entities, line breaks, date and original post URL without guessing timezone', () => {
     const html = `<html><body>${post(55, 'Москва: <b>перекрытие</b><br>15 ноября &amp; 16 ноября. &#x1F6A7; &lt;script&gt;alert(1)&lt;/script&gt;')}</body></html>`;
-    expect(parseTelegramPage(html)).toEqual({ messages: [{
+    expect(parseTelegramPage(html)).toEqual({ messages: [{ channel: 'newsssss09', messageId: '55', links: [],
       text: 'Москва: перекрытие\n15 ноября & 16 ноября. 🚧 <script>alert(1)</script>',
       publisher: '@newsssss09', url: 'https://t.me/newsssss09/55', publishedAt: '2026-11-15T06:00:00.000Z', timezone: null, origin: 'telegram',
-    }], skipped: 0 });
+    }], skipped: 0, nextBefore: null });
   });
 
   it('only accepts this channel, rejects incomplete metadata, skips photo-only posts and returns the latest bounded batch', () => {
     const html = post(1, 'Старое сообщение канала') + post(10, 'Текст другого источника', undefined, 'other_channel') + post(2, 'Нет даты публикации', '') + post(3, '') + post(4, 'Последнее сообщение канала');
-    expect(parseTelegramPage(html, 1)).toEqual({ messages: [expect.objectContaining({ url: 'https://t.me/newsssss09/4', text: 'Последнее сообщение канала' })], skipped: 2 });
+    expect(parseTelegramPage(html, 1)).toEqual({ messages: [expect.objectContaining({ url: 'https://t.me/newsssss09/4', text: 'Последнее сообщение канала' })], skipped: 2, nextBefore: null });
   });
 
   it('handles nested blocks and ignores script/style content and duplicate post ids', () => {
@@ -60,5 +60,24 @@ describe('configured Telegram source', () => {
     const transport = vi.fn<typeof fetch>().mockResolvedValue(page(post(50, 'Первая новость канала') + post(51, 'Вторая новость канала')));
     await expect(importTelegramMessages('Анна', save, 10, transport)).rejects.toMatchObject({ code: 'TELEGRAM_SAVE', message: expect.stringContaining('1 из 2') });
     expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps short captions, anchor destinations and legitimate media-only pages', () => {
+    const result = parseTelegramPage(post(1, 'Да<br><a href="https://example.test/a?x=1&amp;y=2">источник</a>'));
+    expect(result.messages[0].text).toBe('Да\nисточник');
+    expect(result.messages[0].links).toEqual([{ text: 'источник', url: 'https://example.test/a?x=1&y=2' }]);
+    expect(parseTelegramPage(post(2, '')).messages).toEqual([]);
+    expect(parseTelegramPage('<div class="tgme_channel_info">newsssss09</div>').messages).toEqual([]);
+  });
+
+  it('loads at most fifty latest available posts with bounded same-channel pagination', async () => {
+    const html = (from: number, to: number, before?: number) => Array.from({ length: to - from + 1 }, (_, i) => post(from + i, `Текст публикации ${from + i}`)).join('') + (before ? `<a href="/s/newsssss09?before=${before}">More</a>` : '');
+    const transport = vi.fn<typeof fetch>().mockResolvedValueOnce(page(html(41, 60, 41))).mockResolvedValueOnce(page(html(21, 40, 21))).mockResolvedValueOnce(page(html(1, 20)));
+    const result = await fetchTelegramMessages(50, transport);
+    expect(result.messages).toHaveLength(50);
+    expect(result.messages[0].messageId).toBe('11');
+    expect(result.messages.at(-1)?.messageId).toBe('60');
+    expect(transport).toHaveBeenCalledTimes(3);
+    expect(transport.mock.calls[1][0]).toBe('https://t.me/s/newsssss09?before=41');
   });
 });
